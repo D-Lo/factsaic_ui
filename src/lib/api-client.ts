@@ -17,7 +17,6 @@ import type {
   Conversation,
   ConversationCreateRequest,
   ConversationsListResponse,
-  Message,
   MessagesListResponse,
   SendMessageRequest,
   SendMessageResponse,
@@ -33,12 +32,14 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
  * Custom error class for API errors
  */
 export class ApiClientError extends Error {
-  constructor(
-    public status: number,
-    public detail: string
-  ) {
+  status: number;
+  detail: string;
+
+  constructor(status: number, detail: string) {
     super(detail);
     this.name = 'ApiClientError';
+    this.status = status;
+    this.detail = detail;
   }
 }
 
@@ -93,9 +94,9 @@ async function apiRequest<T>(
   options: RequestInit = {}
 ): Promise<T> {
   const token = getToken();
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     'Content-Type': 'application/json',
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   if (token) {

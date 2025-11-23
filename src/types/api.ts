@@ -90,14 +90,27 @@ export interface ConversationsListResponse {
 // Messages
 // ============================================================================
 
+export interface MessageContent {
+  type: 'text';
+  text: string;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface AuthorInfo {
+  id: string;
+  type: 'user' | 'assistant';
+  name: string;
+}
+
 export interface Message {
   id: string;
   conversation_id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  author_user_id: string | null;
-  author_display_name: string | null;
-  model_config_id: string | null;
+  sequence_number: number;
+  author_type: 'user' | 'assistant';
+  author_id: string;
+  author: AuthorInfo;
+  reply_to_message_id: string | null;
+  content: MessageContent;
   created_at: string;
 }
 
