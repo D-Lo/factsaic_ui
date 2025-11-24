@@ -399,7 +399,7 @@ describe('api-client', () => {
 
     it('fetches conversations for a group', async () => {
       const mockConversations = {
-        items: [
+        conversations: [
           {
             id: 'conv1',
             group_id: 'group1',
@@ -407,10 +407,17 @@ describe('api-client', () => {
             created_at: '2025-01-01T00:00:00Z',
             updated_at: '2025-01-01T00:00:00Z',
           },
+          {
+            id: 'conv2',
+            group_id: 'group1',
+            title: 'Another Conversation',
+            created_at: '2025-02-01T00:00:00Z',
+            updated_at: '2025-02-01T00:00:00Z',
+          },
         ],
-        total: 1,
-        limit: 100,
-        offset: 0,
+        total: 2,
+        limit: null,
+        offset: null,
       }
 
       vi.mocked(fetch).mockResolvedValue({

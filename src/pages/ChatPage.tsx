@@ -1,14 +1,5 @@
 /**
- * ChatPage - Main chat interface
- *
- * [LEARNING NOTE - can remove later]
- * This page uses the Shadcn Sidebar component to create a professional chat interface.
- * The Sidebar component provides:
- * - Collapsible sidebar (collapses to icons on desktop, full overlay on mobile)
- * - Persistent state (remembers if it was open/closed)
- * - Responsive behavior (overlay on mobile, icon-collapse on desktop)
- * - Keyboard shortcuts (cmd+b/ctrl+b to toggle)
- * - SidebarRail for easy hover-to-expand interaction
+ * ChatPage - Main chat interface with collapsible sidebar for groups and conversations.
  */
 
 import React from 'react';
@@ -16,6 +7,16 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useGroups } from '@/contexts/GroupsContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Sidebar,
   SidebarContent,
@@ -32,19 +33,11 @@ import {
   SidebarInset,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import { MessageSquare, Plus, LogOut, Users, Settings } from 'lucide-react';
+import { MessageSquare, Plus, LogOut, Users, Settings, Trash } from 'lucide-react';
+import { MessageMarkdown } from '@/components/MessageMarkdown';
 
 /**
- * [LEARNING NOTE - can remove later]
- * AppSidebar - The left sidebar containing groups and conversations
- *
- * This component uses the Shadcn Sidebar building blocks to create a structured sidebar:
- * - collapsible="icon": Collapses to icon-only mode instead of sliding off-screen
- * - variant="inset": Adds padding and styling for a polished look
- * - SidebarHeader: Top section with app branding
- * - SidebarContent: Scrollable middle section with groups/conversations
- * - SidebarFooter: Bottom section with user info and logout
- * - SidebarRail: Hover area at the edge to easily expand/collapse
+ * AppSidebar - Navigation sidebar with groups and conversations
  */
 function AppSidebar() {
   const { user, logout } = useAuth();
@@ -56,21 +49,21 @@ function AppSidebar() {
     selectedConversation,
     selectConversation,
     createNewConversation,
+    deleteConversation,
   } = useGroups();
+  const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
+  const pendingConversation = conversations.find((c) => c.id === pendingDeleteId) || null;
 
   return (
-    <Sidebar collapsible="icon" variant="inset">
-      {/* Header - App branding */}
+    <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-2">
-          <MessageSquare className="h-6 w-6" />
-          <span className="font-semibold text-lg">Factsaic</span>
+          <MessageSquare className="h-6 w-6 shrink-0" />
+          <span className="font-semibold text-lg group-data-[collapsible=icon]:hidden">Factsaic</span>
         </div>
       </SidebarHeader>
 
-      {/* Content - Groups and Conversations */}
       <SidebarContent>
-        {/* Groups Section */}
         <SidebarGroup>
           <SidebarGroupLabel>Groups</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -91,7 +84,6 @@ function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        {/* Conversations Section */}
         <SidebarGroup>
           <div className="flex items-center justify-between px-2">
             <SidebarGroupLabel>Conversations</SidebarGroupLabel>
@@ -119,6 +111,17 @@ function AppSidebar() {
                       {conversation.title || 'New Conversation'}
                     </span>
                   </SidebarMenuButton>
+                  <button
+                    type="button"
+                    className="absolute right-1 top-1.5 flex h-6 w-6 items-center justify-center rounded text-sidebar-foreground/70 opacity-0 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring group-hover/menu-item:opacity-100 group-focus-within/menu-item:opacity-100"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPendingDeleteId(conversation.id);
+                    }}
+                    aria-label="Delete conversation"
+                  >
+                    <Trash className="h-3.5 w-3.5" />
+                  </button>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
@@ -126,7 +129,6 @@ function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* Footer - User info and actions */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -144,29 +146,55 @@ function AppSidebar() {
         </SidebarMenu>
       </SidebarFooter>
       <SidebarRail />
+
+      <AlertDialog
+        open={!!pendingDeleteId}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingDeleteId(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete conversation?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete&nbsp;
+              <span className="font-medium">
+                {pendingConversation?.title || 'this conversation'}
+              </span>
+              . This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPendingDeleteId(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (pendingDeleteId) {
+                  await deleteConversation(pendingDeleteId);
+                }
+                setPendingDeleteId(null);
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Sidebar>
   );
 }
 
 /**
- * [LEARNING NOTE - can remove later]
- * ChatArea - The main chat messages and input area
- *
- * This component displays:
- * - A scrollable list of messages (user messages on right, assistant on left)
- * - A loading indicator when AI is thinking
- * - An input box with send button at the bottom
+ * ChatArea - Message display and input component
  */
 function ChatArea() {
+  const { user } = useAuth();
   const { messages, messagesLoading, selectedConversation, sendNewMessage } = useGroups();
   const [input, setInput] = React.useState('');
   const messagesEndRef = React.useRef<HTMLDivElement>(null);
 
-  /**
-   * [LEARNING NOTE - can remove later]
-   * Auto-scroll to bottom when new messages arrive
-   * useEffect runs this code whenever messages array changes
-   */
+  // Auto-scroll to bottom when new messages arrive
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -176,16 +204,12 @@ function ChatArea() {
 
     try {
       await sendNewMessage(input);
-      setInput(''); // Clear input after sending
+      setInput('');
     } catch (err) {
       console.error('Failed to send message:', err);
     }
   };
 
-  /**
-   * [LEARNING NOTE - can remove later]
-   * Show placeholder when no conversation is selected
-   */
   if (!selectedConversation) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -198,8 +222,7 @@ function ChatArea() {
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full">
-      {/* Messages area - scrollable */}
+    <div className="flex-1 flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((message) => (
           <div
@@ -213,15 +236,14 @@ function ChatArea() {
                   : 'bg-muted text-foreground'
               }`}
             >
-              {message.author_type === 'assistant' && (
-                <div className="text-xs text-muted-foreground mb-1">{message.author.name}</div>
-              )}
-              <div className="whitespace-pre-wrap">{message.content.text}</div>
+              <div className="text-xs mb-1 opacity-70">
+                {message.author_type === 'user' ? user?.display_name : message.author.name}
+              </div>
+              <MessageMarkdown content={message.content.text} />
             </div>
           </div>
         ))}
 
-        {/* Loading indicator */}
         {messagesLoading && (
           <div className="flex justify-start">
             <div className="bg-muted rounded-lg px-4 py-2">
@@ -230,11 +252,9 @@ function ChatArea() {
           </div>
         )}
 
-        {/* Auto-scroll anchor */}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input area - fixed at bottom */}
       <div className="border-t border-border p-4">
         <div className="flex gap-2">
           <Input
@@ -260,14 +280,7 @@ function ChatArea() {
 }
 
 /**
- * [LEARNING NOTE - can remove later]
- * ChatPage - Main page component
- *
- * This wraps everything in SidebarProvider which:
- * - Manages sidebar open/closed state
- * - Persists state in localStorage
- * - Handles responsive behavior
- * - Provides keyboard shortcuts
+ * ChatPage - Main chat page with sidebar navigation
  */
 export function ChatPage() {
   const { groupsLoading, groupsError } = useGroups();
@@ -288,31 +301,14 @@ export function ChatPage() {
     );
   }
 
-  /**
-   * [LEARNING NOTE - can remove later]
-   * Layout structure:
-   * - SidebarProvider: Manages sidebar state (expanded/collapsed) and keyboard shortcuts
-   * - AppSidebar: The collapsible sidebar (sibling of SidebarInset)
-   * - SidebarInset: Main content area that renders as <main> and adjusts spacing for sidebar
-   *
-   * IMPORTANT: Don't wrap another <main> inside SidebarInset - it already renders as <main>
-   *
-   * Behavior:
-   * - Desktop (wide screens): Sidebar and content side-by-side, no overlap
-   * - Mobile (narrow screens): Sidebar as overlay sheet
-   * - Toggle: Click button or press cmd+b/ctrl+b
-   */
   return (
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset className="flex flex-col overflow-hidden">
-        {/* Header with sidebar toggle */}
-        <header className="border-b border-border px-4 py-3 flex items-center gap-3 shrink-0">
+        <header className="sticky top-0 z-20 border-b border-border bg-background px-4 py-3 flex items-center gap-3 shrink-0">
           <SidebarTrigger className="h-8 w-8" />
           <h1 className="font-semibold text-lg">Chat</h1>
         </header>
-
-        {/* Chat area */}
         <ChatArea />
       </SidebarInset>
     </SidebarProvider>

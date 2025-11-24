@@ -16,6 +16,7 @@ import type {
   AddMemberRequest,
   Conversation,
   ConversationCreateRequest,
+  ConversationUpdateRequest,
   ConversationsListResponse,
   MessagesListResponse,
   SendMessageRequest,
@@ -282,6 +283,19 @@ export async function getConversation(conversationId: string): Promise<Conversat
   return apiRequest<Conversation>(`/api/conversations/${conversationId}`);
 }
 
+/**
+ * Update conversation details (title)
+ */
+export async function updateConversation(
+  conversationId: string,
+  data: ConversationUpdateRequest
+): Promise<Conversation> {
+  return apiRequest<Conversation>(`/api/conversations/${conversationId}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
 // ============================================================================
 // Messages API
 // ============================================================================
@@ -319,6 +333,15 @@ export async function sendMessage(
       body: JSON.stringify(data),
     }
   );
+}
+
+/**
+ * Delete a conversation
+ */
+export async function deleteConversation(conversationId: string): Promise<void> {
+  return apiRequest<void>(`/api/conversations/${conversationId}`, {
+    method: 'DELETE',
+  });
 }
 
 // ============================================================================

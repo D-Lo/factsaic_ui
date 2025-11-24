@@ -1,7 +1,5 @@
 /**
- * Theme Toggle Component
- *
- * Switches between light and dark mode.
+ * ThemeToggle - Switches between light and dark mode
  */
 
 import { useState, useEffect } from 'react';
@@ -11,7 +9,6 @@ import { Button } from '@/components/ui/button';
 export function ThemeToggle() {
   const [isDark, setIsDark] = useState(false);
 
-  // 🎓 LEARNING NOTE: On mount, check system preference
   useEffect(() => {
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     setIsDark(prefersDark);

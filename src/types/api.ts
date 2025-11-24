@@ -82,8 +82,15 @@ export interface ConversationCreateRequest {
   title?: string;
 }
 
+export interface ConversationUpdateRequest {
+  title?: string | null;
+}
+
 export interface ConversationsListResponse {
   conversations: Conversation[];
+  total?: number;
+  limit?: number;
+  offset?: number;
 }
 
 // ============================================================================
