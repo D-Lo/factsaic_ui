@@ -42,6 +42,7 @@ describe('AuthContext', () => {
   const mockToken = {
     access_token: 'test-token-123',
     token_type: 'bearer',
+    expires_in: 3600,
   }
 
   beforeEach(() => {

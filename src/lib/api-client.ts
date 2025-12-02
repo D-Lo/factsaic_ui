@@ -248,6 +248,32 @@ export async function addGroupMember(
   });
 }
 
+/**
+ * Remove member from group
+ */
+export async function removeGroupMember(
+  groupId: string,
+  userId: string
+): Promise<void> {
+  return apiRequest<void>(`/api/groups/${groupId}/members/${userId}`, {
+    method: 'DELETE',
+  });
+}
+
+/**
+ * Update group member role
+ */
+export async function updateGroupMemberRole(
+  groupId: string,
+  userId: string,
+  role: 'owner' | 'member'
+): Promise<Member> {
+  return apiRequest<Member>(`/api/groups/${groupId}/members/${userId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ role }),
+  });
+}
+
 // ============================================================================
 // Conversations API
 // ============================================================================

@@ -33,14 +33,16 @@ import {
   SidebarInset,
   SidebarRail,
 } from '@/components/ui/sidebar';
-import { MessageSquare, Plus, LogOut, Users, Settings, Trash } from 'lucide-react';
+import { MessageSquare, Plus, LogOut, Users, Settings, Trash, ChevronDown, ChevronRight } from 'lucide-react';
 import { MessageMarkdown } from '@/components/MessageMarkdown';
+import { useNavigate } from 'react-router';
 
 /**
  * AppSidebar - Navigation sidebar with groups and conversations
  */
 function AppSidebar() {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
   const {
     groups,
     selectedGroup,
@@ -50,9 +52,46 @@ function AppSidebar() {
     selectConversation,
     createNewConversation,
     deleteConversation,
+    createNewGroup,
   } = useGroups();
   const [pendingDeleteId, setPendingDeleteId] = React.useState<string | null>(null);
+  const [expandedGroups, setExpandedGroups] = React.useState<Set<string>>(new Set());
+  const [creatingGroup, setCreatingGroup] = React.useState(false);
+  const [newGroupName, setNewGroupName] = React.useState('');
+
   const pendingConversation = conversations.find((c) => c.id === pendingDeleteId) || null;
+
+  // Auto-expand the selected group
+  React.useEffect(() => {
+    if (selectedGroup) {
+      setExpandedGroups((prev) => new Set(prev).add(selectedGroup.id));
+    }
+  }, [selectedGroup]);
+
+  const toggleGroup = (groupId: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupId)) {
+        next.delete(groupId);
+      } else {
+        next.add(groupId);
+      }
+      return next;
+    });
+  };
+
+  const handleCreateGroup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGroupName.trim()) return;
+
+    try {
+      await createNewGroup({ name: newGroupName });
+      setNewGroupName('');
+      setCreatingGroup(false);
+    } catch (err) {
+      console.error('Failed to create group:', err);
+    }
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -65,65 +104,144 @@ function AppSidebar() {
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel>Groups</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {(groups || []).map((group) => (
-                <SidebarMenuItem key={group.id}>
-                  <SidebarMenuButton
-                    onClick={() => selectGroup(group)}
-                    isActive={selectedGroup?.id === group.id}
-                    tooltip={group.name}
-                  >
-                    <Users className="h-4 w-4" />
-                    <span>{group.name}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
           <div className="flex items-center justify-between px-2">
-            <SidebarGroupLabel>Conversations</SidebarGroupLabel>
+            <SidebarGroupLabel>Groups</SidebarGroupLabel>
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => createNewConversation()}
-              disabled={!selectedGroup}
+              className="h-6 w-6 p-0 group-data-[collapsible=icon]:hidden"
+              onClick={() => setCreatingGroup(true)}
+              title="Create new group"
             >
               <Plus className="h-4 w-4" />
             </Button>
           </div>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {(conversations || []).map((conversation) => (
-                <SidebarMenuItem key={conversation.id}>
-                  <SidebarMenuButton
-                    onClick={() => selectConversation(conversation)}
-                    isActive={selectedConversation?.id === conversation.id}
-                    tooltip={conversation.title || 'New Conversation'}
-                  >
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="truncate">
-                      {conversation.title || 'New Conversation'}
-                    </span>
-                  </SidebarMenuButton>
-                  <button
+            {creatingGroup && (
+              <form onSubmit={handleCreateGroup} className="px-2 py-2 space-y-2">
+                <Input
+                  type="text"
+                  placeholder="Group name"
+                  value={newGroupName}
+                  onChange={(e) => setNewGroupName(e.target.value)}
+                  autoFocus
+                  className="h-8"
+                />
+                <div className="flex gap-2">
+                  <Button type="submit" size="sm" disabled={!newGroupName.trim()}>
+                    Create
+                  </Button>
+                  <Button
                     type="button"
-                    className="absolute right-1 top-1.5 flex h-6 w-6 items-center justify-center rounded text-sidebar-foreground/70 opacity-0 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sidebar-ring group-hover/menu-item:opacity-100 group-focus-within/menu-item:opacity-100"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setPendingDeleteId(conversation.id);
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setCreatingGroup(false);
+                      setNewGroupName('');
                     }}
-                    aria-label="Delete conversation"
                   >
-                    <Trash className="h-3.5 w-3.5" />
-                  </button>
-                </SidebarMenuItem>
-              ))}
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            )}
+            <SidebarMenu>
+              {(groups || []).map((group) => {
+                const isExpanded = expandedGroups.has(group.id);
+                const groupConversations = group.id === selectedGroup?.id ? conversations : [];
+
+                return (
+                  <div key={group.id}>
+                    <SidebarMenuItem>
+                      <div className="flex items-center w-full">
+                        <button
+                          className="flex h-8 w-8 items-center justify-center rounded hover:bg-sidebar-accent"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            // If expanding and group is not selected, select it first to load conversations
+                            if (!isExpanded && group.id !== selectedGroup?.id) {
+                              selectGroup(group);
+                            }
+                            toggleGroup(group.id);
+                          }}
+                        >
+                          {isExpanded ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </button>
+                        <SidebarMenuButton
+                          onClick={() => selectGroup(group)}
+                          isActive={selectedGroup?.id === group.id}
+                          tooltip={group.name}
+                          className="flex-1"
+                        >
+                          <Users className="h-4 w-4" />
+                          <span>{group.name}</span>
+                        </SidebarMenuButton>
+                        <button
+                          className="flex h-8 w-8 items-center justify-center rounded hover:bg-sidebar-accent opacity-0 group-hover/menu-item:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/groups/${group.id}/settings`);
+                          }}
+                          title="Group settings"
+                        >
+                          <Settings className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </SidebarMenuItem>
+
+                    {/* Conversations under this group */}
+                    {isExpanded && groupConversations.length > 0 && (
+                      <div className="ml-6 space-y-1">
+                        {groupConversations.map((conversation) => (
+                          <SidebarMenuItem key={conversation.id}>
+                            <SidebarMenuButton
+                              onClick={() => selectConversation(conversation)}
+                              isActive={selectedConversation?.id === conversation.id}
+                              tooltip={conversation.title || 'New Conversation'}
+                              className="text-sm"
+                            >
+                              <MessageSquare className="h-3.5 w-3.5" />
+                              <span className="truncate">
+                                {conversation.title || 'New Conversation'}
+                              </span>
+                            </SidebarMenuButton>
+                            <button
+                              type="button"
+                              className="absolute right-1 top-1.5 flex h-6 w-6 items-center justify-center rounded text-sidebar-foreground/70 opacity-0 transition hover:bg-sidebar-accent hover:text-sidebar-accent-foreground group-hover/menu-item:opacity-100"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setPendingDeleteId(conversation.id);
+                              }}
+                              aria-label="Delete conversation"
+                            >
+                              <Trash className="h-3.5 w-3.5" />
+                            </button>
+                          </SidebarMenuItem>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* New conversation button for expanded group */}
+                    {isExpanded && group.id === selectedGroup?.id && (
+                      <div className="ml-6">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-full justify-start text-sm"
+                          onClick={() => createNewConversation()}
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-2" />
+                          New Conversation
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -131,12 +249,6 @@ function AppSidebar() {
 
       <SidebarFooter>
         <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Settings">
-              <Settings className="h-4 w-4" />
-              <span>Settings</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
           <SidebarMenuItem>
             <SidebarMenuButton onClick={logout} tooltip="Logout">
               <LogOut className="h-4 w-4" />

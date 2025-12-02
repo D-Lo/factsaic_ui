@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
 import { ChatPage } from '@/pages/ChatPage';
+import { GroupSettingsPage } from '@/pages/GroupSettingsPage';
 import { ProtectedRoute } from '@/components/ProtectedRoute';
 
 function App() {
@@ -19,6 +20,14 @@ function App() {
           element={
             <ProtectedRoute>
               <ChatPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups/:groupId/settings"
+          element={
+            <ProtectedRoute>
+              <GroupSettingsPage />
             </ProtectedRoute>
           }
         />

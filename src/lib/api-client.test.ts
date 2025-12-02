@@ -95,7 +95,7 @@ describe('api-client', () => {
 
   describe('login', () => {
     beforeEach(() => {
-      global.fetch = vi.fn()
+      globalThis.fetch = vi.fn()
     })
 
     it('sends OAuth2 form data and returns token', async () => {
@@ -161,7 +161,7 @@ describe('api-client', () => {
         json: async () => {
           throw new Error('Not JSON')
         },
-      } as Response)
+      } as unknown as Response)
 
       await expect(login('test@example.com', 'password')).rejects.toThrow(
         ApiClientError
@@ -179,7 +179,7 @@ describe('api-client', () => {
 
   describe('register', () => {
     beforeEach(() => {
-      global.fetch = vi.fn()
+      globalThis.fetch = vi.fn()
     })
 
     it('registers user and returns user with token', async () => {
@@ -232,7 +232,7 @@ describe('api-client', () => {
 
   describe('getCurrentUser', () => {
     beforeEach(() => {
-      global.fetch = vi.fn()
+      globalThis.fetch = vi.fn()
     })
 
     it('fetches current user with authorization header', async () => {
@@ -279,7 +279,7 @@ describe('api-client', () => {
 
   describe('updateUser', () => {
     beforeEach(() => {
-      global.fetch = vi.fn()
+      globalThis.fetch = vi.fn()
     })
 
     it('updates user with PATCH request', async () => {
@@ -320,7 +320,7 @@ describe('api-client', () => {
 
   describe('Groups API', () => {
     beforeEach(() => {
-      global.fetch = vi.fn()
+      globalThis.fetch = vi.fn()
       setToken('test-token')
     })
 
@@ -374,7 +374,6 @@ describe('api-client', () => {
 
       const result = await createGroup({
         name: 'New Group',
-        description: 'A new group',
       })
 
       expect(result).toEqual(newGroup)
@@ -384,7 +383,6 @@ describe('api-client', () => {
           method: 'POST',
           body: JSON.stringify({
             name: 'New Group',
-            description: 'A new group',
           }),
         })
       )
@@ -393,7 +391,7 @@ describe('api-client', () => {
 
   describe('Conversations API', () => {
     beforeEach(() => {
-      global.fetch = vi.fn()
+      globalThis.fetch = vi.fn()
       setToken('test-token')
     })
 
@@ -458,7 +456,7 @@ describe('api-client', () => {
 
   describe('Messages API', () => {
     beforeEach(() => {
-      global.fetch = vi.fn()
+      globalThis.fetch = vi.fn()
       setToken('test-token')
     })
 
@@ -496,7 +494,7 @@ describe('api-client', () => {
 
   describe('204 No Content Handling', () => {
     beforeEach(() => {
-      global.fetch = vi.fn()
+      globalThis.fetch = vi.fn()
       setToken('test-token')
     })
 
@@ -507,7 +505,7 @@ describe('api-client', () => {
         json: async () => {
           throw new Error('Should not try to parse JSON for 204')
         },
-      } as Response)
+      } as unknown as Response)
 
       // This would typically be a DELETE endpoint
       const result = await getCurrentUser() // Using this as example
